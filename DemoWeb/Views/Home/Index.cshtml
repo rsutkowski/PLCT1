@@ -1,0 +1,138 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+<div class="jumbotron">
+    <h1>Message Blaster</h1>
+    <p>40 characters short of Twitter!</p>
+    <label>Add a new message:</label>
+    <input type="text" size="100" data-bind="value: newMessage" />
+    <button class="btn btn-default" data-bind="click:postNew">Post Me!</button>
+</div>
+
+<div class="row">
+    <div id="liveExample">
+
+
+
+
+        <div class="col-md-2 pull-right">
+            <label><input type="radio" value="Starred" data-bind="checked: filterValue" />Starred</label><br />
+            <label><input type="radio" value="Unstarred" data-bind="checked: filterValue" />Unstarred</label><br />
+            <label><input type="radio" value="All" data-bind="checked: filterValue" />All</label><br />
+            <button data-bind="click: loadData">Filter Data</button>
+        </div>
+        <div class="col-md-10">
+            <div data-bind="if: isLoaded()">
+
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Message Id</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody data-bind="foreach: items">
+                        <tr>
+                            <td class="text-right"><div data-bind="visible: Favorited"><i class="glyphicon glyphicon-star glyphicon-2x" style="color: yellow"></i></div></td>
+                            <td data-bind="text: Body"></td>
+                            <td data-bind="text: MessageId"></td>
+                            <td>
+                                <button data-bind="click: $parent.starMessage">Toggle Star</button>
+                                <button data-bind="click: $parent.deleteMessage">Delete</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section scripts
+    {
+    <script type="text/javascript">
+
+        var MyModel = function () {
+            var dataRootUrl = "/api/message";
+            var self = this;
+            self.isLoaded = ko.observable(false);
+            self.isLoading = ko.observable(false);
+            self.items = ko.observableArray();
+            self.sortByStars = ko.observable(true);
+            self.newMessage = ko.observable('');
+            self.starredFilter = ko.observable(false);
+            self.unstarredFilter = ko.observable(false);
+            self.filterValue = ko.observable('All');
+
+            self.getLoadUrl = function () {
+                if (self.filterValue() == 'Starred')
+                    return dataRootUrl + '/starred';
+                if (self.filterValue() == 'Unstarred')
+                    return dataRootUrl + "/unstarred";
+                return dataRootUrl;
+
+            }
+
+            self.postNew = function () {
+
+                $.ajax(dataRootUrl + '?message=' + self.newMessage(), {
+                    type: "POST",
+                    cache: false,
+                }).done(function () {
+                    self.newMessage("");
+                    self.loadData();
+                });
+
+            };
+
+
+
+            self.loadData = function () {
+                this.isLoading(true);
+                this.isLoaded(false);
+
+                var url = self.getLoadUrl();
+
+                // Setting a timeout so the loading text is visible in the sample
+                setTimeout(function () {
+                    $.ajax(url, {
+                        type: "GET",
+                        cache: false,
+                    }).done(function (data) {
+                        self.items(data);
+                        self.isLoaded(true);
+                        self.isLoading(false);
+                    });
+                }, 1000);
+            };
+
+            self.deleteMessage = function (item) {
+                $.ajax(dataRootUrl + '/' + item.MessageId, {
+                    type: "DELETE",
+                    cache: false
+                }).done(function () {
+                    self.loadData();
+                });
+            };
+
+            self.starMessage = function (item) {
+                setTimeout(function () {
+                    $.ajax(dataRootUrl + "/" + item.MessageId + "/star/", {
+                        type: "POST",
+                        cache: false,
+                    }).done(function () {
+                        self.loadData();
+                    });
+                }, 1000);
+            };
+        };
+
+        var viewModel = new MyModel();
+        ko.applyBindings(viewModel);
+        viewModel.loadData();
+
+    </script>
+}
